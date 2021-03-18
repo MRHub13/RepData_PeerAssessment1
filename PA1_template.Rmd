@@ -12,6 +12,8 @@ Show any code that is needed to:
 
    1. **Load the data (i.e. read.csv())**
 ```{r, echo = TRUE}
+## ... Setting global option to turn warnings and messages off
+knitr::opts_chunk$set(warning=FALSE, message=FALSE)
 ## ... Load the data
 filename <- "activity.zip"
 # # ... Checking if archieve (*.zip) or file (*.csv) already exists.
@@ -38,13 +40,18 @@ dim(activity)
 names(activity)
 head(activity)
 str(activity)
-# # ... total number of missing data
-sum(is.na(activity$steps))/dim(activity)[[1]]
-# # ... transforming the date column (chr format) into date format using lubridate
-library(lubridate)
-activity$date<-ymd(activity$date)
-length(unique(activity$date))
+# # ... total & relative number of missing data
+c(sum(is.na(activity$steps)),sum(is.na(activity$steps))/dim(activity)[[1]])
+# # ... transforming the date column from "chr" format into "Date" format using 
+activity$date <- as.Date(activity$date)
+# # ... transforming the interval column from "int" format into #Factor"("hh:mm") format using
+activity$minute <- activity$interval %% 100
+activity$hour <- activity$interval %/% 100
+activity$elapsed <- activity$hour * 60 + activity$minute
+# interval as a factor
+activity$sInterval <- as.factor(sprintf("%02d:%02d", activity$hour, activity$minute))
 str(activity)
+summary(activity)
 ```   
        
         
@@ -56,20 +63,15 @@ For this part of the assignment, you can ignore the missing values in the datase
 StepsEachDay <- aggregate(activity$steps, list(activity$date), FUN=sum)
 colnames(StepsEachDay) <- c("Date", "Steps")
 g <- ggplot(StepsEachDay, aes(Steps))
-g+geom_histogram(boundary=0, binwidth=2500, col="darkorange", fill="blue")+ggtitle("Histogram of steps taken each day")+xlab("Steps")+ylab("Frequency")+theme(plot.title = element_text(face="bold", size=12))+scale_x_continuous(breaks=seq(0,25000,2500))+scale_y_continuous(breaks=seq(0,18,2))
+g+geom_histogram(boundary=0, binwidth=2500, col="darkorange", fill="blue")+ggtitle("Histogram of the total number of steps taken each day")+xlab("steps")+ylab("frequency")+theme(plot.title = element_text(face="bold", size=12))+scale_x_continuous(breaks=seq(0,25000,2500))+scale_y_continuous(breaks=seq(0,18,2))
 dev.copy(png, "figure/Figure2_1.png",width=480,height=480,units="px")
 dev.off()
 ```
 
    2. **Calculate and report the mean and median total number of steps taken per day**      
 ```{r}
-# ... Mean
-mean(StepsEachDay$Steps, na.rm=TRUE)
-
-# ... Median
-median(StepsEachDay$Steps, na.rm=TRUE)
-
-
+# ... Mean & Median values ...
+c(mean(StepsEachDay$Steps, na.rm=TRUE), median(StepsEachDay$Steps, na.rm=TRUE))
 ```    
 
 
@@ -82,7 +84,7 @@ StepsPerDays <- aggregate(steps~interval,data=activity,FUN=mean,na.action=na.omi
 StepsPerDays$time <- StepsPerDays$interval/100
 # draw the line plot
 h <- ggplot(StepsPerDays, aes(time, steps))
-h+geom_line(col="orange")+ggtitle("Average steps per 5-minute interval, on average across all the days")+xlab("Days")+ylab("Steps")+theme(plot.title = element_text(face="bold", size=12))
+h+geom_line(col="orange")+ggtitle("Average number of steps taken in a day (per 5' interval)")+xlab("hours in a day / 5' interval")+ylab("average number of steps - averaged across all days")+theme(plot.title = element_text(face="bold", size=12))
 dev.copy(png, "figure/Figure3_1.png")
 dev.off()
 ```
@@ -125,15 +127,14 @@ SPDF <- aggregate(MDFI$steps, list(MDFI$date), FUN=sum)
 colnames(SPDF) <- c("Date", "Steps")
 # draw the histogram
 g <- ggplot(SPDF, aes(Steps))
-g+geom_histogram(boundary=0, binwidth=2500, col="darkorange", fill="darkgreen")+ggtitle("Histogram of total number of steps taken each day")+xlab("Steps")+ylab("Frequency")+theme(plot.title = element_text(face="bold", size=12))+scale_x_continuous(breaks=seq(0,25000,2500))+scale_y_continuous(breaks=seq(0,26,2))
+g+geom_histogram(boundary=0, binwidth=2500, col="darkorange", fill="darkgreen")+ggtitle("Histogram of total number of steps taken each day")+xlab("steps")+ylab("frequency")+theme(plot.title = element_text(face="bold", size=12))+scale_x_continuous(breaks=seq(0,25000,2500))+scale_y_continuous(breaks=seq(0,26,2))
 dev.copy(png, "figure/Figure4_1.png")
 dev.off()
+# ... Mean & Median values with imputed missing data  
+c(mean(SPDF$Steps), median(SPDF$Steps))
 
-# ... Mean
-mean(SPDF$Steps)
-
-# ... Median
-median(SPDF$Steps)
+# ... difference between Mean & Median values, without and with impouted missing data 
+(c(mean(StepsEachDay$Steps, na.rm=TRUE), median(StepsEachDay$Steps, na.rm=TRUE))-(c(mean(SPDF$Steps), median(SPDF$Steps))))
 ```
 The impact of imputing missing data on the estimates of the total daily number of steps is not significant - bearing in mind that different imputing / replacement methods may cause different results. In this case only in the interval from 10.000 to 12.500 steps the frequency has changed - grown from 18 to 26.
 
@@ -148,7 +149,6 @@ MDFI$weekday <- weekdays(MDFI$date)
 MDFI$DayType <- ifelse(MDFI$weekday=='Saturday' | MDFI$weekday=='Sunday', 'weekend','weekday')
 # see first 10 values
 head(MDFI, n=10)
-
 ```
 
    2. **Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).**
@@ -159,11 +159,7 @@ SPD_DT <- aggregate(steps~interval+DayType,data=MDFI,FUN=mean,na.action=na.omit)
 SPD_DT$time <- StepsPerDays$interval/100
 # draw the line plot
 j <- ggplot(SPD_DT, aes(time, steps))
-j+geom_line(col="darkorange")+ggtitle("Average steps per days: weekdays vs. weekends")+xlab("Days")+ylab("Steps")+theme(plot.title = element_text(face="bold", size=12))+facet_grid(DayType ~ .)
+j+geom_line(col="darkorange")+ggtitle("Average number of steps taken: per days of weekdays vs. weekends")+xlab("hours in a day / 5' interval")+ylab("averaged steps across all weekdays / weekend days")+theme(plot.title = element_text(face="bold", size=12))+facet_grid(DayType ~ .)
 dev.copy(png, "figure/Figure5_1.png")
 dev.off()
 ```
-
-
-
-
