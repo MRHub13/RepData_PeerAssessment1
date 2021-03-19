@@ -200,7 +200,7 @@ SPD %>% select(time, steps) %>% filter(steps==max(SPD$steps))
     ##   <dbl> <dbl>
     ## 1  8.35  206.
 
-## **Imputing missing values**
+## **Q\#4 Imputing missing values**
 
 Note that there are a number of days/intervals where there are missing
 values (coded as NA). The presence of missing days may introduce bias
@@ -306,7 +306,7 @@ imputing / replacement methods may cause different results. In this case
 only in the interval from 10.000 to 12.500 steps the frequency has
 changed - grown from 18 to 26.
 
-## **Q\#4 Are there differences in activity patterns between weekdays and weekends?**
+## **Q\#5 Are there differences in activity patterns between weekdays and weekends?**
 
 For this part the weekdays() function may be of some help here. Use the
 dataset with the filled-in missing values for this part.
